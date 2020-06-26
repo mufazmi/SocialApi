@@ -41,7 +41,7 @@ And you also need to make change in website section of `Constants.php` file.
 
 ```bash
 //Website Information
-define('WEBSITE_DOMAIN', 'http://api.socialcodia.ml');               //your domain name
+define('WEBSITE_DOMAIN', 'http://SocialApi.socialcodia.ml');               //your domain name
 define('WEBSITE_EMAIL', 'socialcodia@gmail.com');                    //your email address
 define('WEBSITE_EMAIL_PASSWORD', 'password');                        //your email password
 define('WEBSITE_EMAIL_FROM', 'Social Codia');                        // your website name here
@@ -66,9 +66,8 @@ To Create An Account, Accept only post request with three parameter
 The end point is to Create or Register an account is `createUser`
 
 <b>Demo Url</b> 
-* API Url <a href="http://api.socialcodia.ml/createUser">http://api.socialcodia.ml/createUser</a>
-* GUI Url <a href="http://restui.socialcodia.ml/register">http://restui.socialcodia.ml/register</a>
-
+* API Url <a href="http://SocialApi.socialcodia.ml/createUser">http://SocialApi.socialcodia.ml/createUser</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/register">http://SocialUi.socialcodia.ml/register</a>
 
 An email verification will be send to user email address when they registered an account into the system.
 
@@ -76,10 +75,10 @@ In verification email the verification link will be like this.
 
 ```bash
 
-    http://api.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S
+    http://SocialApi.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S
 
 ```
-* Domain Name : (` http://api.socialcodia.ml/ `)
+* Domain Name : (` http://SocialApi.socialcodia.ml/ `)
 * End Point (` verifyEmail `)
 * Encypted User Email (` wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE= `)
 * Encypted Code ( `$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S` )
@@ -89,7 +88,7 @@ In verification email the verification link will be like this.
 </p>
 
 <b>Demo Url</b> 
-* API Url <a href="http://api.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S">http://api.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S">http://SocialApi.socialcodia.ml/verifyEmail/wdpWwmufazmit4Py2aYd7MsocialcodiavknYY3bKxS7okyO9NgpYTmufazmiTGsocialcodiaE=/$2y$10$GWEv1cnJo2YdGbmo4mrwA.LNsocialcodiai4sj8.EdxIZuyWX3fjRHEiBrBX2S</a>
 
 
 ## Send Email Verification Code Again
@@ -102,8 +101,8 @@ User can make the send email verification link code if there email address is no
 The end point of send email verification code is `sendEmailVerfication`
 
 <b>Demo Url</b>
-* API Url <a href="http://api.socialcodia.ml/sendEmailVerfication">http://api.socialcodia.ml/sendEmailVerfication</a>
-* GUI Url <a href="http://restui.socialcodia.ml/sendEmailVerfication">http://restui.socialcodia.ml/sendEmailVerfication</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/sendEmailVerfication">http://SocialApi.socialcodia.ml/sendEmailVerfication</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/sendEmailVerfication">http://SocialUi.socialcodia.ml/sendEmailVerfication</a>
 
 
 ## Login Into Account
@@ -126,15 +125,15 @@ The return infomration from the database will be like this.
         "id": 173,
         "name": "Social Codia",
         "email": "socialcodia@gmail.com",
-        "image": "http://api.socialcodia.ml/public/uploads/5ee743ba282bc.jpg",
+        "image": "http://SocialApi.socialcodia.ml/public/uploads/5ee743ba282bc.jpg",
         "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzb2NpYWxjb2RpYS5uZXQiLCJpYXQiOjE1OTIyNDc5ODgsInVzZXJfaWQiOjE3M30.i_vxJ2AyrgLa5vL5L-FXKDRr5NVKDyDSHeZuccF7OT4"
     }
 }
 ```
 
 <b>Demo Url</b> 
-* API Url <a href="http://api.socialcodia.ml/login">http://api.socialcodia.ml/login</a>
-* GUI Url <a href="http://restui.socialcodia.ml/login">http://restui.socialcodia.ml/login</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/login">http://SocialApi.socialcodia.ml/login</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/login">http://SocialUi.socialcodia.ml/login</a>
 
 ## Forgot Password
 
@@ -159,8 +158,8 @@ This will perform these Validation before sending an OTP to users email address.
 </p>
 
 <b>Demo Url</b> 
-* API Url <a href="http://api.socialcodia.ml/forgotPassword">http://api.socialcodia.ml/forgotPassword</a>
-* GUI Url <a href="http://restui.socialcodia.ml/forgotPassword">http://restui.socialcodia.ml/forgotPassword</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/forgotPassword">http://SocialApi.socialcodia.ml/forgotPassword</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/forgotPassword">http://SocialUi.socialcodia.ml/forgotPassword</a>
 
 ## Reset Password
 
@@ -182,8 +181,8 @@ This will perform some validation before varifying the OTP.
 Then they will check the `OTP` is correct or not, if correct then the new password will update into server.
 
 <b>Demo Url</b> 
-* API Url <a href="http://api.socialcodia.ml/resetPassword">http://api.socialcodia.ml/resetPassword</a>
-* GUI Url <a href="http://restui.socialcodia.ml/resetPassword">http://restui.socialcodia.ml/resetPassword</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/resetPassword">http://SocialApi.socialcodia.ml/resetPassword</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/resetPassword">http://SocialUi.socialcodia.ml/resetPassword</a>
 
 
 ## Update Account Password
@@ -202,8 +201,8 @@ The end point of update password is `updatePassword`
 
 <b>Demo Url</b> 
 
-* API Url <a href="http://api.socialcodia.ml/updatePassword">http://api.socialcodia.ml/updatePassword</a>
-* GUI Url <a href="http://restui.socialcodia.ml/settings">http://restui.socialcodia.ml/settings</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/updatePassword">http://SocialApi.socialcodia.ml/updatePassword</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/settings">http://SocialUi.socialcodia.ml/settings</a>
 
 
 an verification code will be sent to user email address when they successfull updated their password.
@@ -236,14 +235,14 @@ E.g *Data Return From The Server*
             "id": 157,
             "name": "Umair Farooqui",
             "email": "info.mufazmi@gmail.com",
-            "image": "http://api.socialcodia.net/public/uploads/5eeasfw53cdcde.png"
+            "image": "http://SocialApi.socialcodia.net/public/uploads/5eeasfw53cdcde.png"
         },
 
         {
             "id": 173,
             "name": "Social Codia",
             "email": "socialcodia@gmail.com",
-            "image": "http://api.socialcodia.net/public/uploads/5ee7c753cdcde.png"
+            "image": "http://SocialApi.socialcodia.net/public/uploads/5ee7c753cdcde.png"
         }
     ]
 }
@@ -251,8 +250,8 @@ E.g *Data Return From The Server*
 
 <b>Demo Url</b> 
 
-* API Url <a href="http://api.socialcodia.ml/users">http://api.socialcodia.ml/users</a>
-* GUI Url <a href="http://restui.socialcodia.ml/users">http://restui.socialcodia.ml/users</a>
+* API Url <a href="http://SocialApi.socialcodia.ml/users">http://SocialApi.socialcodia.ml/users</a>
+* GUI Url <a href="http://SocialUi.socialcodia.ml/users">http://SocialUi.socialcodia.ml/users</a>
 
 ## Note :- WHEN ANY USER LOGIN INTO SYSTEM USING THERE EMAIL AND PASSWORD CREDENTIAL, AN TOKEN WILL ALSO BE SENT TO USER vbWITH USER PUBLIC INFORMATION, SO AFTER COMPLETATION OF LOGIN PROCESS THE TOKEN IN HEADER IS REQUIRED FOR MAKING ANY REQUEST
 
@@ -270,6 +269,6 @@ you don't need to worry about that things, you only need to change the code of `
 
 * You can check out the UI which is mainely developed for this project, <a href="https://github.com/SocialCodia/RestUi">@SocialCodia/RestUi</a>
 
-* Visit on the link to perform API Action, http://RestUi.SocialCodia.ml
+* Visit on the link to perform API Action, http://SocialUi.SocialCodia.ml
 
 That's it! Now go build something cool.
