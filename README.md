@@ -1,4 +1,4 @@
-# REST API
+# SOCIAL API
 
 <p align="center">
     <img src="https://i.imgur.com/ldslPC7.png" width="120" >
