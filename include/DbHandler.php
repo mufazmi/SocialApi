@@ -99,12 +99,12 @@ class DbHandler
         }
     }
 
-    function updateUser($id,$name,$username,$image)
+    function updateUser($id,$name,$username,$bio,$image)
     {
         $imageUrl = $this->uploadImage($image);
-        $query = "UPDATE users SET name=?, username=?, image=? WHERE id=?";
+        $query = "UPDATE users SET name=?, username=?, bio=?, image=? WHERE id=?";
         $stmt = $this->con->prepare($query);
-        $stmt->bind_param("ssss",$name,$username,$imageUrl,$id);
+        $stmt->bind_param("sssss",$name,$username,$bio,$imageUrl,$id);
         if($stmt->execute())
         {
             return USER_UPDATED;
@@ -113,6 +113,16 @@ class DbHandler
         {
             return USER_UPDATE_FAILED;
         }
+    }
+
+    function getUserImageById($id)
+    {
+        $query = "SELECT image FROM users WHERE id=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$id);
+        $stmt->execute();
+        $stmt->bind_result($image);
+        return $image;
     }
 
     function postFeed($id, $content, $image)
@@ -219,6 +229,24 @@ class DbHandler
         }
     }
 
+    function checkFollowing($tokenId,$id)
+    {
+        $query = "SELECT followsId FROM follows WHERE userId=? AND toUserId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("ss",$tokenId,$id);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows()>0) 
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    
+
     function getFeedById($feedId)
     {
         $feed = array();
@@ -229,34 +257,14 @@ class DbHandler
         $stmt->bind_param("s",$feedId);
         $stmt->execute();
         $stmt->bind_result($id,$userId,$content,$image,$timestamp);
-        while ($stmt->fetch()) 
-        {
-            $feed = array();
-            $feed['feedId'] = $id;
-            $feed['feedContent'] = $content;
-            $feed['feedImage'] = $image;
-            $feed['feedTimestamp'] = $timestamp;
-            $feed['userId'] = $userId;
-            array_push($feeds, $feed);
-        }
-        foreach ($feeds as $feedList) 
-        {   
-            $feed = array();
-            $users = array();
-            $id = $feedList['userId'];
-            $users = $this->getUserById($id);
-            $feed['userId']         =    $users['id'];
-            $feed['userName']       =    $users['name'];
-            $feed['userImage']      =    $users['image'];
-            $feed['feedId']         =    $feedList['feedId'];
-            $feed['feedLikes']      =    $this->getLikesCountByFeedId($feedList['feedId']);
-            $feed['feedComments']   =    $this->getCommentsCountByFeedId($feedList['feedId']);
-            $feed['feedImage']      =    $feedList['feedImage'];
-            $feed['feedContent']    =    $feedList['feedContent'];
-            $feed['feedTimestamp']  =    $feedList['feedTimestamp'];
-            array_push($feedsData, $feed);
-        }
-        return $feedsData;
+        $stmt->fetch();
+        $feed = array();
+        $feed['feedId'] = $id;
+        $feed['feedContent'] = $content;
+        $feed['feedImage'] = $image;
+        $feed['feedTimestamp'] = $timestamp;
+        $feed['userId'] = $userId;
+        return $feed;
     }
 
     function likeFeed($feedId, $userId)
@@ -271,6 +279,36 @@ class DbHandler
         else
         {
             return FEED_LIKE_FAILED;
+        }
+    }
+
+    function doFollow($userId, $id)
+    {
+        $query = "INSERT INTO follows (userId,toUserId) VALUES (?,?)";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("ss",$userId,$id);
+        if ($stmt->execute()) 
+        {
+            return FOLLOWED;
+        }
+        else
+        {
+            return FOLLOW_FAILED;
+        }
+    }
+
+    function doUnFollow($userId, $id)
+    {
+        $query = "DELETE FROM follows WHERE userId=? AND toUserId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("ss",$userId,$id);
+        if ($stmt->execute()) 
+        {
+            return UNFOLLOWED;
+        }
+        else
+        {
+            return UNFOLLOW_FAILED;
         }
     }
 
@@ -351,6 +389,7 @@ class DbHandler
             $feed['userUsername']   =    $users['username'];
             $feed['userImage']      =    $users['image'];
             $feed['feedId']         =    $feedList['feedId'];
+            $feed['liked']          =    $this->checkLike($userId,$feedList['feedId']);
             $feed['feedLikes']      =    $this->getLikesCountByFeedId($feedList['feedId']);
             $feed['feedComments']   =    $this->getCommentsCountByFeedId($feedList['feedId']);
             $feed['feedImage']      =    $feedList['feedImage'];
@@ -363,16 +402,17 @@ class DbHandler
 
     function getUserById($id)
     {
-        $query = "SELECT id,name,username,email,image FROM users WHERE id=?";
+        $query = "SELECT id,name,username,email,bio,image FROM users WHERE id=?";
         $stmt = $this->con->prepare($query);
         $stmt->bind_param('s',$id);
         $stmt->execute();
-        $stmt->bind_result($id,$name,$username,$email,$image);
+        $stmt->bind_result($id,$name,$username,$email,$bio,$image);
         $stmt->fetch();
         $user['id'] = $id;
         $user['name'] = $name;
         $user['username'] = $username;
         $user['email'] = $email;
+        $user['bio'] = $bio;
         if (empty($image)) 
         {
             $image = DEFAULT_USER_IMAGE;
@@ -397,6 +437,36 @@ class DbHandler
         $query = "SELECT * FROM likes WHERE feedId=?";
         $stmt = $this->con->prepare($query);
         $stmt->bind_param("s",$feedId);
+        $stmt->execute();
+        $stmt->store_result();
+        return $stmt->num_rows;
+    }
+
+    function getFeedsCountById($userId)
+    {
+        $query = "SELECT * FROM feeds WHERE userId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$userId);
+        $stmt->execute();
+        $stmt->store_result();
+        return $stmt->num_rows;
+    }
+
+    function getFollowersCountById($userId)
+    {
+        $query = "SELECT * FROM follows WHERE toUserId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$userId);
+        $stmt->execute();
+        $stmt->store_result();
+        return $stmt->num_rows;
+    }
+
+        function getFollowingsCountById($userId)
+    {
+        $query = "SELECT * FROM follows WHERE userId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$userId);
         $stmt->execute();
         $stmt->store_result();
         return $stmt->num_rows;
@@ -682,6 +752,17 @@ class DbHandler
         return $password;
     }
 
+    function getImageById($userId)
+    {
+        $query = "SELECT image FROM users WHERE id=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param('s',$id);
+        $stmt->execute();
+        $stmt->bind_result($image);
+        $stmt->fetch();
+        return $image;
+    }
+
     function getPasswordById($id)
     {
         $query = "SELECT password FROM users WHERE id=?";
@@ -791,17 +872,18 @@ class DbHandler
 
     function getUserByEmail($email)
     {
-        $query = "SELECT id,name,username,email,image FROM users WHERE email=?";
+        $query = "SELECT id,name,username,email,bio,image FROM users WHERE email=?";
         $stmt = $this->con->prepare($query);
         $stmt->bind_param('s',$email);
         $stmt->execute();
-        $stmt->bind_result($id,$name,$username,$email,$image);
+        $stmt->bind_result($id,$name,$username,$email,$bio,$image);
         $stmt->fetch();
         $user = array();
         $user['id'] = $id;
         $user['name'] = $name;
         $user['username'] = $username;
         $user['email'] = $email;
+        $user['bio'] = $bio;
         if (empty($image)) 
         {
             $image = DEFAULT_USER_IMAGE;

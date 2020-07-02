@@ -31,7 +31,6 @@ $app->post('/createUser', function(Request $request, Response $response)
     if(!checkEmptyParameter(array('name','username','email','password'),$request,$response))
     {
         $db = new DbHandler();
-
         $requestParameter = $request->getParsedBody();
         $email = $requestParameter['email'];
         $password = $requestParameter['password'];
@@ -42,35 +41,113 @@ $app->post('/createUser', function(Request $request, Response $response)
 
         if($result == USER_CREATION_FAILED)
         {
-            returnResponse(true,"Failed to create an account",$response);
+            returnException(true,"Failed to create an account",$response);
         }
         else if($result == EMAIL_EXIST)
         {
-            returnResponse(true,"Email already registered",$response);
+            returnException(true,"Email already registered",$response);
         }
         else if($result == USERNAME_EXIST)
         {
-            returnResponse(true,"Username not available",$response);
+            returnException(true,"Username not available",$response);
         }
         else if($result == USER_CREATED)
         {
             $code = $db->getCodeByEmail($email);
             if(prepareVerificationMail($name,$email,$code))
             {
-               returnResponse(false,"An Email Verification Link Has Been Sent To Your Email Address: ".$email,$response);
+               returnException(false,"An Email Verification Link Has Been Sent To Your Email Address: ".$email,$response);
             }
             else
             {
-               returnResponse(true,"Failed To Send Verification Email",$response);
+               returnException(true,"Failed To Send Verification Email",$response);
             }
         }
         else if($result == VERIFICATION_EMAIL_SENT_FAILED)
         {
-            returnResponse(true,"Failed To Send Verification Email",$response);
+            returnException(true,"Failed To Send Verification Email",$response);
         }
         else if($result == EMAIL_NOT_VALID)
         {
-            returnResponse(true,"Enter Valid Email",$response);
+            returnException(true,"Enter Valid Email",$response);
+        }
+    }
+});
+
+$app->post('/follow', function(Request $request, Response $response)
+{
+    $db = new DbHandler;
+    if (validateToken($db,$request,$response)) 
+    {
+        $requestParameter = $request->getParsedBody();
+        if (!checkEmptyParameter(array('id'),$request,$response)) 
+        {
+            $userId = $db->getUserId();
+            $toUserId = $requestParameter['id'];
+            if ($db->checkUserById($toUserId)) 
+            {  
+                if (!$db->checkFollowing($userId,$toUserId)) 
+                {
+                    $result = $db->doFollow($userId,$toUserId);
+                    if ($result==FOLLOWED) 
+                    {
+                        $user = array();
+                        $user['followersCount'] = $db->getFollowersCountById($toUserId);
+                        returnUserResponse(false,"Followed",$user,$response);
+                    }
+                    else if ($result==FOLLOW_FAILED) 
+                    {
+                        returnException(true,"Failed To Follow",$response);
+                    }
+                }
+                else
+                {
+                    returnException(true,"Already Following",$response);
+                }
+            }
+            else
+            {
+                returnException(true,"User Not Found",$response);
+            }
+        }
+    }
+});
+
+$app->post('/unFollow', function(Request $request, Response $response)
+{
+    $db = new DbHandler;
+    if (validateToken($db,$request,$response)) 
+    {
+        $requestParameter = $request->getParsedBody();
+        if (!checkEmptyParameter(array('id'),$request,$response)) 
+        {  
+            $userId = $db->getUserId();
+            $toUserId = $requestParameter['id'];
+            if ($db->checkUserById($toUserId)) 
+            {  
+                if ($db->checkFollowing($userId,$toUserId)) 
+                {
+                    $result = $db->doUnFollow($userId,$toUserId);
+                    if ($result==UNFOLLOWED) 
+                    {
+                        $user = array();
+                        $user['followersCount'] = $db->getFollowersCountById($toUserId);
+                        returnUserResponse(false,"UnFollowed",$user,$response);
+                    }
+                    else if ($result==UNFOLLOW_FAILED) 
+                    {
+                        returnException(true,"Failed To Unfollow",$response);
+                    }
+                }
+                else
+                {
+                    returnException(true,"Already Unfollowed",$response);
+                }
+            }
+            else
+            {
+                returnException(true,"User Not Found",$response);
+            }
         }
     }
 });
@@ -89,49 +166,112 @@ $app->post('/login', function(Request $request, Response $response)
         {
             $user = $db->getUserByEmail($email);
             $user['token'] = getToken($user['id']);
-            $errorDetails = array();
-            $errorDetails['error'] = false;
-            $errorDetails['message'] = "Login Successfull";
-            $errorDetails['user'] = $user;
-            $response->write(json_encode($errorDetails));
-            return $response->withHeader('Content-Type','application/json')
-                            ->withStatus(200);
+            $user['feedsCount'] = $db->getFeedsCountById($user['id']);
+            $user['followersCount'] = $db->getFollowersCountById($user['id']);
+            $user['followingsCount'] = $db->getFollowingsCountById($user['id']);
+            $responseUserDetails = array();
+            $responseUserDetails['error'] = false;
+            $responseUserDetails['message'] = "Login Successfull";
+            $responseUserDetails['user'] = $user;
+            $response->write(json_encode($responseUserDetails));
+            return $response->withHeader('Content-type', 'application/json')
+                     ->withStatus(200);
+
         }
         else if($result ==USER_NOT_FOUND)
         {
-            returnResponse(true,"Email Is Not Registered",$response);
+            returnException(true,"Email Is Not Registered",$response);
         }
         else if($result ==PASSWORD_WRONG)
         {
-            returnResponse(true,"Wrong Password",$response);
+            returnException(true,"Wrong Password",$response);
         }
         else if($result ==UNVERIFIED_EMAIL)
         {
-            returnResponse(true,"Email Is Not Verified",$response);
+            returnException(true,"Email Is Not Verified",$response);
         }
         else if($result == EMAIL_NOT_VALID)
         {
             $email = $db->getEmailByUsername($email);
             if (empty($email)) 
             {
-                returnResponse(true,"Email or Username is Wrong",$response);             
+                returnException(true,"Email or Username is Wrong",$response);             
             }
             else
             {
                 $user = $db->getUserByEmail($email);
                 $user['token'] = getToken($user['id']);
-                $errorDetails = array();
-                $errorDetails['error'] = false;
-                $errorDetails['message'] = "Login Successfull";
-                $errorDetails['user'] = $user;
-                $response->write(json_encode($errorDetails));
-                return $response->withHeader('Content-Type','application/json')
-                                ->withStatus(200);
-            }
+                $user['feedsCount'] = $db->getFeedsCountById($user['id']);
+                $user['followersCount'] = $db->getFollowersCountById($user['id']);
+                $user['followingsCount'] = $db->getFollowingsCountById($user['id']);
+                $responseUserDetails = array();
+                $responseUserDetails['error'] = false;
+                $responseUserDetails['message'] = "Login Successfull";
+                $responseUserDetails['user'] = $user;
+                $response->write(json_encode($responseUserDetails));
+                return $response->withHeader('Content-type', 'application/json')
+                     ->withStatus(200);            }
         }
         else
         {
-            returnResponse(true,"Something Went Wrong",$response);
+            returnException(true,"Something Went Wrong",$response);
+        }
+    }
+});
+
+$app->get('/user/{username}', function(Request $request, Response $response, array $args)
+{
+    $db = new DbHandler;
+    if(validateToken($db,$request,$response))
+    {
+        $tokenId = $db->getUserId();
+        $username = $args['username'];
+        if ($db->isUsernameExist($username)) 
+        {
+            $id = $db->getUserIdByUsername($username);
+            $user = $db->getUserById($id);
+            $user['feedsCount'] = $db->getFeedsCountById($id);
+            $user['followersCount'] = $db->getFollowersCountById($id);
+            $user['followingsCount'] = $db->getFollowingsCountById($id);
+            $user['following'] = $db->checkFollowing($tokenId,$id);
+            $responseUserDetails = array();
+            $responseUserDetails['error'] = false;
+            $responseUserDetails['message'] = "User Found";
+            $responseUserDetails['user'] = $user;
+            $response->write(json_encode($responseUserDetails));
+            return $response->withHeader('Content-type', 'application/json')
+                     ->withStatus(200);
+        }
+        else
+        {
+            returnException(true,"Username Not Exist",$response);
+        }
+    }
+});
+
+$app->get('/user', function(Request $request, Response $response, array $args)
+{
+    $db = new DbHandler;
+    if(validateToken($db,$request,$response))
+    {
+        $tokenId = $db->getUserId();
+        if ($db->checkUserById($tokenId)) 
+        {
+            $user = $db->getUserById($tokenId);
+            $user['feedsCount'] = $db->getFeedsCountById($tokenId);
+            $user['followersCount'] = $db->getFollowersCountById($tokenId);
+            $user['followingsCount'] = $db->getFollowingsCountById($tokenId);
+            $responseUserDetails = array();
+            $responseUserDetails['error'] = false;
+            $responseUserDetails['message'] = "User Found";
+            $responseUserDetails['user'] = $user;
+            $response->write(json_encode($responseUserDetails));
+            return $response->withHeader('Content-Type','application/json')
+                            ->withStatus(200);
+        }
+        else
+        {
+            returnException(true,"Username Not Exist",$response);
         }
     }
 });
@@ -141,29 +281,44 @@ $app->post('/updateUser', function(Request $request, Response $response)
     $db = new DbHandler;
     if (validateToken($db,$request,$response)) 
     {
-        if (!checkEmptyParameter(array('name','username'),$request,$response)) 
+        if (!checkEmptyParameter(array('name','username','bio'),$request,$response)) 
         {
             $requestParameter = $request->getParsedBody();
             $requestParameters = $request->getUploadedFiles();
             $name = $requestParameter['name'];
             $username = $requestParameter['username'];
+            $bio = $requestParameter['bio'];
             $userId = $db->getUserId();
             if (empty($requestParameters['image'])) 
             {
-                $image = null;
+                $image = $db->getImageById($userId);
             }
             else
             {
                 $image = $requestParameters['image'];
             }
-            $result = $db->updateUser($userId,$name,$username,$image);
+            if (empty($bio))
+            {
+                $bio = "This user is lazy. So they didn't written any bio.";
+            }
+            $result = $db->updateUser($userId,$name,$username,$bio,$image);
             if ($result==USER_UPDATED) 
             {
-                returnResponse(false,"User Information Has Been Updated",$response);
-            }
+                $user = $db->getUserById($userId);
+                $user['feedsCount'] = $db->getFeedsCountById($userId);
+                $user['followersCount'] = $db->getFollowersCountById($userId);
+                $user['followingsCount'] = $db->getFollowingsCountById($userId);
+                $responseUserDetails = array();
+                $responseUserDetails['error'] = false;
+                $responseUserDetails['message'] = "User Updated";
+                $responseUserDetails['user'] = $user;
+                $response->write(json_encode($responseUserDetails));
+                return $response->withHeader('Content-Type','application/json')
+                                ->withStatus(200);
+                }
             else if ($result==USER_UPDATE_FAILED) 
             {
-                returnResponse(true,"Oops...! Failed To To Update User",$response);
+                returnException(true,"Oops...! Failed To To Update User",$response);
             }
         }
     } 
@@ -186,16 +341,16 @@ $app->post('/postFeed', function(Request $request, Response $response)
                 $result = $db->postFeed($id,$content,$image);
                 if ($result==FEED_POSTED) 
                 {
-                    returnResponse(false,"Feed Has Been Posted",$response);
+                    returnException(false,"Feed Has Been Posted",$response);
                 }
                 else if ($result==FEED_POST_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Post Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Post Your Feed",$response);
                 }
             }
             else
             {
-                returnResponse(true,"Can't Post Empty Feed",$response);
+                returnException(true,"Can't Post Empty Feed",$response);
             }
         }
         else
@@ -207,11 +362,11 @@ $app->post('/postFeed', function(Request $request, Response $response)
                 $result = $db->postFeed($id,$content,$image);
                 if ($result==FEED_POSTED) 
                 {
-                    returnResponse(false,"Feed Has Been Posted",$response);
+                    returnException(false,"Feed Has Been Posted",$response);
                 }
                 else if ($result==FEED_POST_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Post Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Post Your Feed",$response);
                 }
             }
             else
@@ -220,11 +375,11 @@ $app->post('/postFeed', function(Request $request, Response $response)
                 $result = $db->postFeed($id,$content,$image);
                 if ($result==FEED_POSTED) 
                 {
-                    returnResponse(false,"Feed Has Been Posted",$response);
+                    returnException(false,"Feed Has Been Posted",$response);
                 }
                 else if ($result==FEED_POST_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Post Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Post Your Feed",$response);
                 }
                 }
         }
@@ -248,16 +403,16 @@ $app->post('/updateFeed', function (Request $request, Response $response)
                 $result = $db->updateFeed($id,$content,$image);
                 if ($result==USER_UPDATED) 
                 {
-                    returnResponse(false,"Feed Has Been Updated",$response);
+                    returnException(false,"Feed Has Been Updated",$response);
                 }
                 else if ($result==USER_UPDATE_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Update Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Update Your Feed",$response);
                 }
             }
             else
             {
-                returnResponse(true,"Can't Update Empty Feed",$response);
+                returnException(true,"Can't Update Empty Feed",$response);
             }
         }
         else
@@ -269,11 +424,11 @@ $app->post('/updateFeed', function (Request $request, Response $response)
                 $result = $db->updateFeed($id,$content,$image);
                 if ($result==USER_UPDATED) 
                 {
-                    returnResponse(false,"Feed Has Been Updated",$response);
+                    returnException(false,"Feed Has Been Updated",$response);
                 }
                 else if ($result==USER_UPDATE_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Update Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Update Your Feed",$response);
                 }
             }
             else
@@ -282,11 +437,11 @@ $app->post('/updateFeed', function (Request $request, Response $response)
                 $result = $db->updateFeed($id,$content,$image);
                 if ($result==USER_UPDATED) 
                 {
-                    returnResponse(false,"Feed Has Been Updated",$response);
+                    returnException(false,"Feed Has Been Updated",$response);
                 }
                 else if ($result==USER_UPDATE_FAILED) 
                 {
-                    returnResponse(true,"Oops...! Failed To Updated Your Feed",$response);
+                    returnException(true,"Oops...! Failed To Updated Your Feed",$response);
                 }
                 }
         }
@@ -301,17 +456,17 @@ $app->get('/feeds', function(Request $request, Response $response)
         $feeds = $db->getFeeds();
         if (!empty($feeds)) 
         {
-            $errorDetails = array();
-            $errorDetails['error'] = false;
-            $errorDetails['message'] = "Feed Lists Found";
-            $errorDetails['feeds'] = $feeds;
-            $response->write(json_encode($errorDetails));
+            $responseFeedDetails = array();
+            $responseFeedDetails['error'] = false;
+            $responseFeedDetails['message'] = "Feed List Found";
+            $responseFeedDetails['feeds'] = $feeds;
+            $response->write(json_encode($responseFeedDetails));
             return $response->withHeader('Content-Type','application/json')
                             ->withStatus(200);
         }
         else
         {
-            returnResponse(true,"Feeds Not Found",$response);
+            returnException(true,"Feeds Not Found",$response);
         }
     }
 });
@@ -333,21 +488,21 @@ $app->post('/deleteFeed', function(Request $request, Response $response)
                     $result = $db->deleteFeed($feedId,$userId);
                     if ($result== FEED_DELETED) 
                     {
-                        returnResponse(false,"Feed Deleted",$response);
+                        returnException(false,"Feed Deleted",$response);
                     }
                     else if($result == FEED_DELETE_FAILED)
                     {
-                        returnResponse(true,"Failed To Delete Feed", $response);
+                        returnException(true,"Failed To Delete Feed", $response);
                     }
                 }
                 else
                 {
-                    returnResponse(true,"WARNING..! STOP..! You can delete only your own Feeds",$response);
+                    returnException(true,"WARNING..! STOP..! You can delete only your own Feeds",$response);
                 }
             }
             else
             {
-                returnResponse(true,"Feed Not Found",$response);
+                returnException(true,"Feed Not Found",$response);
             }
         }
     }
@@ -364,23 +519,24 @@ $app->get('/{username}/feeds', function(Request $request, Response $response, ar
         {
             $feeds = $db->getFeedsByUserId($id);
             if (!empty($feeds)) 
-            {
-                $errorDetails = array();
-                $errorDetails['error'] = false;
-                $errorDetails['message'] = "Feed Lists Found";
-                $errorDetails['feeds'] = $feeds;
-                $response->write(json_encode($errorDetails));
+            { 
+                $responseFeedDetails = array();
+                $responseFeedDetails['error'] = false;
+                $responseFeedDetails['message'] = "Feed List Found";
+                $responseFeedDetails['feeds'] = $feeds;
+                $response->write(json_encode($responseFeedDetails));
                 return $response->withHeader('Content-Type','application/json')
-                                ->withStatus(200);
+                                ->withStatus(200);  
+
             }
             else
             {
-                returnResponse(true,"No Feed Found",$response);
+                returnException(true,"No Feed Found",$response);
             }
         }
         else
         {
-            returnResponse(true,"User Not Found",$response);
+            returnException(true,"User Not Found",$response);
         }
     }
 });
@@ -391,18 +547,25 @@ $app->get('/feed/{feedId}', function(Request $request, Response $response,array 
     if (validateToken($db,$request,$response)) 
     {
         $feedId = $args['feedId'];
-        $feeds = $db->getFeedById($feedId);
-        if (!empty($feeds)) 
+        $feed = $db->getFeedById($feedId);
+        if (!empty($feed)) 
         {
-            $errorDetails = array();
-            $errorDetails['error'] = false;
-            $errorDetails['message'] = "Feed Found";
-            $errorDetails['feed'] = $feeds;
-            return $response->write(json_encode($errorDetails))
-                            ->withHeader('Content-Type','application/json')
+            $users = $db->getUserById($feed['userId']);
+            $feed['userId']         =    $users['id'];
+            $feed['userName']       =    $users['name'];
+            $feed['userImage']      =    $users['image'];
+            $feed['liked']          =    $db->checkLike($feed['userId'],$feed['feedId']);
+            $feed['feedLikes']      =    $db->getLikesCountByFeedId($feed['feedId']);
+            $feed['feedComments']   =    $db->getCommentsCountByFeedId($feed['feedId']);
+            $responseFeedDetails = array();
+            $responseFeedDetails['error'] = false;
+            $responseFeedDetails['message'] = "Feed List Found";
+            $responseFeedDetails['feed'] = $feed;
+            $response->write(json_encode($responseFeedDetails));
+            return $response->withHeader('Content-Type','application/json')
                             ->withStatus(200);
         }
-        returnResponse(true,"No Feed Found",$response);
+        returnException(true,"No Feed Found",$response);
     }
 });
 
@@ -421,22 +584,30 @@ $app->post('/likeFeed', function(Request $request, Response $response)
                 if (!$db->isFeedLiked($feedId,$userId)) {
                     $result = $db->likeFeed($feedId,$userId);
                     if ($result== FEED_LIKED) 
-                    {
-                        returnResponse(false,"Feed Liked",$response);
+                    { 
+                        $feed = array();
+                        $feed['feedLikes'] = $db->getLikesCountByFeedId($feedId);
+                        $responseFeedDetails = array();
+                        $responseFeedDetails['error'] = false;
+                        $responseFeedDetails['message'] = "Feed Liked";
+                        $responseFeedDetails['feed'] = $feed;
+                        $response->write(json_encode($responseFeedDetails));
+                        return $response->withHeader('Content-Type','application/json')
+                                        ->withStatus(200);
                     }
                     else
                     {
-                        returnResponse(true,"Failed To Like Feed", $response);
+                        returnException(true,"Failed To Like Feed", $response);
                     }
                 }
                 else
                 {
-                    returnResponse(true,"Feed Already Liked", $response);
+                    returnException(true,"Feed Already Liked", $response);
                 }
             }
             else
             {
-                returnResponse(true,"Feed Not Found",$response);
+                returnException(true,"Feed Not Found",$response);
             }
         }
     }
@@ -459,21 +630,29 @@ $app->post('/unlikeFeed', function(Request $request, Response $response)
                     $result = $db->unlikeFeed($feedId,$userId);
                     if ($result== FEED_UNLIKED) 
                     {
-                        returnResponse(false,"Feed Unliked",$response);
+                        $feed = array();
+                        $feed['feedLikes'] = $db->getLikesCountByFeedId($feedId);
+                        $responseFeedDetails = array();
+                        $responseFeedDetails['error'] = false;
+                        $responseFeedDetails['message'] = "Feed Unliked";
+                        $responseFeedDetails['feed'] = $feed;
+                        $response->write(json_encode($responseFeedDetails));
+                        return $response->withHeader('Content-Type','application/json')
+                                        ->withStatus(200);
                     }
                     else
                     {
-                        returnResponse(true,"Failed To Unlike Feed", $response);
+                        returnException(true,"Failed To Unlike Feed", $response);
                     }
                 }
                 else
                 {
-                    returnResponse(true,"Feed Already Unliked",$response);
+                    returnException(true,"Feed Already Unliked",$response);
                 }
             }
             else
             {
-                returnResponse(true,"Feed Not Found",$response);
+                returnException(true,"Feed Not Found",$response);
             }
         }
     }
@@ -495,16 +674,16 @@ $app->post('/postFeedComment', function(Request $request, Response $response)
                 $result = $db->addFeedComment($feedId,$feedComment,$userId);
                 if ($result== FEED_COMMENT_ADDED) 
                 {
-                    returnResponse(false,"Comment Added",$response);
+                    returnException(false,"Comment Added",$response);
                 }
                 else if($result == FEED_COMMENT_ADD_FAILED)
                 {
-                    returnResponse(true,"Failed To Add Comment", $response);
+                    returnException(true,"Failed To Add Comment", $response);
                 }
             }
             else
             {
-                returnResponse(true,"Feed Not Found",$response);
+                returnException(true,"Feed Not Found",$response);
             }
         }
     }
@@ -527,21 +706,21 @@ $app->post('/deleteFeedComment', function(Request $request, Response $response)
                     $result = $db->deleteFeedComment($commentId,$userId);
                     if ($result== FEED_COMMENT_DELETED) 
                     {
-                        returnResponse(false,"Comment Deleted",$response);
+                        returnException(false,"Comment Deleted",$response);
                     }
                     else if($result == FEED_COMMENT_DELETE_FAILED)
                     {
-                        returnResponse(true,"Failed To Delete Comment", $response);
+                        returnException(true,"Failed To Delete Comment", $response);
                     }
                 }
                 else
                 {
-                    returnResponse(true,"WARNING..! STOP..! You can delete only your own comments",$response);
+                    returnException(true,"WARNING..! STOP..! You can delete only your own comments",$response);
                 }
             }
             else
             {
-                returnResponse(true,"Comment Not Found",$response);
+                returnException(true,"Comment Not Found",$response);
             }
         }
     }
@@ -563,28 +742,28 @@ $app->post('/sendEmailVerfication',function(Request $request, Response $response
             $process = prepareVerificationMail($name,$email,$code);
             if($process)
             {
-                returnResponse(false,"An Email Verification Link Has Been Sent Your Email Address: ".$email,$response);
+                returnException(false,"An Email Verification Link Has Been Sent Your Email Address: ".$email,$response);
             }
             else
             {
-                returnResponse(true,"Failed To Sent Verification Email",$response);
+                returnException(true,"Failed To Sent Verification Email",$response);
             }
         }
         else if($result ==USER_NOT_FOUND)
         {
-            returnResponse(true,"No Account Registered With This Email",$response);
+            returnException(true,"No Account Registered With This Email",$response);
         }
         else if($result == EMAIL_NOT_VALID)
         {
-            returnResponse(true,"Enter Valid Email",$response);
+            returnException(true,"Enter Valid Email",$response);
         }
         else if($result ==EMAIL_ALREADY_VERIFIED)
         {
-            returnResponse(true,"Your Email Address Already Verified",$response);
+            returnException(true,"Your Email Address Already Verified",$response);
         }
         else
         {
-            returnResponse(true,"Something Went Wrong",$response);
+            returnException(true,"Something Went Wrong",$response);
         }
     }
 });
@@ -600,27 +779,27 @@ $app->get('/verifyEmail/{email}/{code}',function(Request $request, Response $res
 
     if($result == EMAIL_VERIFIED)
     {
-        returnResponse(false,"Email Has Been Verified",$response);
+        returnException(false,"Email Has Been Verified",$response);
     }
     else if($result ==EMAIL_NOT_VERIFIED)
     {
-        returnResponse(true,"Failed To Verify Email",$response);
+        returnException(true,"Failed To Verify Email",$response);
     }
     else if($result ==INVAILID_USER)
     {
-        returnResponse(true,"INVALID USER",$response);
+        returnException(true,"INVALID USER",$response);
     }
     else if($result ==INVALID_VERFICATION_CODE)
     {
-        returnResponse(true,"INVALID VERIFCATION CODE",$response);
+        returnException(true,"INVALID VERIFCATION CODE",$response);
     }
     else if($result ==EMAIL_ALREADY_VERIFIED)
     {
-        returnResponse(true,"Your Email Is Already Verified",$response);
+        returnException(true,"Your Email Is Already Verified",$response);
     }
     else
     {
-        returnResponse(true,"Something Went Wrong",$response);
+        returnException(true,"Something Went Wrong",$response);
     }
 });
 
@@ -638,29 +817,29 @@ $app->post('/forgotPassword', function(Request $request, Response $response)
             $code = decrypt($db->getCodeByEmail($email));
             if(prepareForgotPasswordMail($name,$email,$code))
             {
-                returnResponse(false,"OTP has been sent to your email address",$response);
+                returnException(false,"OTP has been sent to your email address",$response);
             }
-            returnResponse(true,"Failed To Send OTP Email",$response);
+            returnException(true,"Failed To Send OTP Email",$response);
         }
         else if($result == EMAIL_NOT_VALID)
         {
-            returnResponse(true,"Enter Valid Email",$response);
+            returnException(true,"Enter Valid Email",$response);
         }       
         else if($result ==USER_NOT_FOUND)
         {
-            returnResponse(true,"Email Is Not Registered",$response);
+            returnException(true,"Email Is Not Registered",$response);
         }
         else if($result ==EMAIL_NOT_VERIFIED)
         {
-            returnResponse(true,"Email Is Not Verified",$response);
+            returnException(true,"Email Is Not Verified",$response);
         }
         else if($result ==CODE_UPDATE_FAILED)
         {
-            returnResponse(true,"Oops...! Some Error Occurred During Updating Code Into Database",$response);
+            returnException(true,"Oops...! Some Error Occurred During Updating Code Into Database",$response);
         }
         else
         {
-            returnResponse(true,"Oops...! Something Went Wrong.",$response);
+            returnException(true,"Oops...! Something Went Wrong.",$response);
         }
     }
 });
@@ -681,31 +860,31 @@ $app->post('/resetPassword', function(Request $request, Response $response)
         {
             $name = $db->getNameByEmail($email);
             preparePasswordChangedMail($name,$email);
-            returnResponse(false,"Password Has Been Changed",$response);
+            returnException(false,"Password Has Been Changed",$response);
         }
         else if($result == EMAIL_NOT_VALID)
         {
-            returnResponse(true,"Enter Valid Email",$response);
+            returnException(true,"Enter Valid Email",$response);
         }       
         else if($result ==USER_NOT_FOUND)
         {
-            returnResponse(true,"Email Is Not Registered",$response);
+            returnException(true,"Email Is Not Registered",$response);
         }
         else if($result ==EMAIL_NOT_VERIFIED)
         {
-            returnResponse(true,"Email Is Not Verified",$response);
+            returnException(true,"Email Is Not Verified",$response);
         }
         else if($result ==PASSWORD_RESET_FAILED)
         {
-            returnResponse(true,"Oops...! Some Error Occurred During Reseting Password",$response);
+            returnException(true,"Oops...! Some Error Occurred During Reseting Password",$response);
         }
         else if($result ==CODE_WRONG)
         {
-            returnResponse(true,"Invalid Otp",$response);
+            returnException(true,"Invalid Otp",$response);
         }
         else
         {
-            returnResponse(true,"Oops...! Something Went Wrong.",$response);
+            returnException(true,"Oops...! Something Went Wrong.",$response);
         }
 
 
@@ -726,22 +905,22 @@ $app->post('/updatePassword',function(Request $request, Response $response)
                 $result = $db->updatePassword($id,$password,$newPassword);
                 if($result ==PASSWORD_WRONG)
                 {
-                    returnResponse(true,"Wrong Password",$response);
+                    returnException(true,"Wrong Password",$response);
                 }
                 else if($result==PASSWORD_CHANGED)
                 {
                     $email = $db->getEmailById($id);
                     $name = $db->getNameByEmail($email);
                     preparePasswordChangedMail($name,$email);
-                    returnResponse(false,"Password Has Been Updated",$response);
+                    returnException(false,"Password Has Been Updated",$response);
                 }
                 else if($result ==PASSWORD_CHANGE_FAILED)
                 {
-                    returnResponse(true,"Oops..! Something Went Wrong, Password Not Changed",$response);
+                    returnException(true,"Oops..! Something Went Wrong, Password Not Changed",$response);
                 }
                 else
                 {
-                    returnResponse(true,"Oops...! Something Went Wrong.",$response);
+                    returnException(true,"Oops...! Something Went Wrong.",$response);
                 }
             }
     }
@@ -760,20 +939,20 @@ $app->post('/uploadProfileImage', function(Request $request, Response $response)
             $result = $db->uploadProfileImage($id,$image);
             if($result == IMAGE_UPLOADED)
                 {
-                    returnResponse(false,"Image Uploaded",$response);
+                    returnException(false,"Image Uploaded",$response);
                 }        
                 else if($result ==IMAGE_UPLOADE_FAILED)
                 {
-                    returnResponse(true,"Failed To Upload The Image",$response);
+                    returnException(true,"Failed To Upload The Image",$response);
                 }
                 else if($result ==IMAGE_NOT_SELECTED)
                 {
-                    returnResponse(true,"Image Not Selected",$response);
+                    returnException(true,"Image Not Selected",$response);
                 }
         }
         else
         {
-            returnResponse(true,"Image Not Selected",$response);
+            returnException(true,"Image Not Selected",$response);
         }
     }
 });
@@ -787,17 +966,17 @@ $app->get('/users', function(Request $request, Response $response)
             $users = $db->getUsers($id);
             if (!empty($users)) 
             {
-                $errorDetails = array();
-                $errorDetails['error'] = false;
-                $errorDetails['message'] = "Users List Found";
-                $errorDetails['users'] = $users;
-                $response->write(json_encode($errorDetails));
-                return $response->withHeader('Content-Type','application/json')
-                                ->withStatus(200);
+                $responseUserDetails = array();
+                $responseUserDetails['error'] = false;
+                $responseUserDetails['message'] = "Users List Found";
+                $responseUserDetails['users'] = $users;
+                $response->write(json_encode($responseUserDetails));
+                return $response->withHeader('Content-type', 'application/json')
+                         ->withStatus(200);
             }
             else
             {
-                returnResponse(true,"No User Found",$response);
+                returnException(true,"No User Found",$response);
             }
     }
 });
@@ -818,7 +997,7 @@ function checkEmptyParameter($requiredParameter,$request,$response)
     }
     if($error)
     {
-        returnResponse(true,"Required Parameter ".substr($errorParam,0,-2)." is missing",$response);
+        returnException(true,"Required Parameter ".substr($errorParam,0,-2)." is missing",$response);
     }
     return $error;
 }
@@ -1150,7 +1329,7 @@ function decrypt($data)
     return $email; 
 }
 
-function returnResponse($error,$message,$response)
+function returnException($error,$message,$response)
 {
     $errorDetails = array();
     $errorDetails['error'] = $error;
@@ -1159,6 +1338,29 @@ function returnResponse($error,$message,$response)
     return $response->withHeader('Content-Type','application/json')
                     ->withStatus(200);
 }
+
+function returnFeedResponse($error,$message,$feedResponse,$response)
+{
+    $responseFeedDetails = array();
+    $responseFeedDetails['error'] = $error;
+    $responseFeedDetails['message'] = $message;
+    $responseFeedDetails['feed'] = $feedResponse;
+    $response->write(json_encode($responseFeedDetails));
+    return $response->withHeader('Content-Type','application/json')
+                    ->withStatus(200);
+}
+
+function returnUserResponse($error,$message,$userResponse,$response)
+{
+    $responseUserDetails = array();
+    $responseUserDetails['error'] = $error;
+    $responseUserDetails['message'] = $message;
+    $responseUserDetails['user'] = $userResponse;
+    $response->write(json_encode($responseUserDetails));
+    return $response->withHeader('Content-type', 'application/json')
+             ->withStatus(200);
+}
+
 
 function getToken($userId)
 {
@@ -1186,13 +1388,14 @@ function validateToken($db,$request,$response)
         }
         else if($result == JWT_TOKEN_ERROR || $result==JWT_USER_NOT_FOUND)
         {
-            returnResponse(true,"Token Error...! Please Login Again",$response);
+            returnException(true,"Token Error...! Please Login Again",$response);
             $error = true;
         }
     }
+
     else
     {
-        returnResponse(true,"Invalid Token, Please Login Again",$response);
+        returnException(true,"Invalid Token, Please Login Again",$response);
         $error = true;
     }
     if ($error) 

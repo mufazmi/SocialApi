@@ -3,18 +3,20 @@
 ///////////////////////////////////////////////////// CHANGED INFORMATION /////////////////////////////////////////////////////
 
 //Database Connection
-define('DB_NAME',                                                                                                                      'SocialApi');   //your database username
+define('DB_NAME','socialapi');   //your database username
 define('DB_USER', 'root');          //your database name
 define('DB_PASS', '');              //your database password
 define('DB_HOST', 'localhost');     //your database host name
 
 //Website Information
-define('WEBSITE_DOMAIN', 'http://api.socialcodia.ml/public/');               //your domain name
+define('WEBSITE_DOMAIN', 'http://socialapi.socialcodia.ml/public/');               //your domain name
 define('WEBSITE_EMAIL', 'socialcodia@gmail.com');                    //your email address
 define('WEBSITE_EMAIL_PASSWORD', 'password');                        //your email password
 define('WEBSITE_EMAIL_FROM', 'Social Codia');                        // your website name here
 define('WEBSITE_NAME', 'Social Api');                              //your website name here
 define('WEBSITE_OWNER_NAME', 'Umair Farooqui');                      //your name, or anyones name, we will send this name with email verification mail.
+
+define('DEFAULT_USER_IMAGE', 'http://socialapi.socialcodia.ml/public/uploads/api/user.png');
 
 define('JWT_SECRET_KEY', 'SocialCodia');  							//your jwt secret key, Please use a very dificult secret key, which no one can guess it.
 
@@ -82,6 +84,14 @@ define('FEED_UPDATE_FAILE', 509);
 
 define('USER_UPDATED', 506);
 define('USER_UPDATE_FAILED', 507);
+define('FOLLOWED', 600);
+define('FOLLOW_FAILED', 601);
+define('UNFOLLOWED', 602);
+define('UNFOLLOW_FAILED', 603);
+
+
+
+
 
 
 
@@ -89,8 +99,6 @@ define('USER_UPDATE_FAILED', 507);
 define('JWT_TOKEN_ERROR', 402);
 define('JWT_TOKEN_FINE', 403);
 define('JWT_USER_NOT_FOUND', 404);
-
-define('DEFAULT_USER_IMAGE', 'http://socialcodia.net/SocialApi/public/uploads/api/user.png');
 
 
 
