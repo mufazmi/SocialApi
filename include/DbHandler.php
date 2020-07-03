@@ -172,6 +172,56 @@ class DbHandler
         }
     }
 
+    function getCommentsByFeedId($feedId)
+    {
+        $comments = array();
+        $commentsData = array();
+        $query = "SELECT commentId,userId,feedId,feedComment,timestamp FROM comments WHERE feedId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$feedId);
+        $stmt->execute();
+        $stmt->bind_result($commentId,$userId,$feedId,$feedComment,$timestamp);
+        while ($stmt->fetch()) 
+        {
+            $comment = array();
+            $comment['commentId'] = $commentId ;
+            $comment['userId'] = $userId ;
+            $comment['feedId'] = $feedId ;
+            $comment['feedComment'] = $feedComment ;
+            $comment['timestamp'] = $timestamp ;
+            array_push($comments, $comment);
+        }
+        foreach ($comments as $commentList) 
+        {   
+            $comment = array();
+            $users = array();
+            $userId = $this->getUserId();
+            $id = $commentList['userId'];
+            $users = $this->getUserById($id);
+            $comment['userId']         =    $users['id'];
+            $comment['userName']       =    $users['name'];
+            $comment['userUsername']   =    $users['username'];
+            $comment['userImage']      =    $users['image'];
+            $comment['liked']          =    $this->checkCommentLike($userId,$commentList['commentId']);
+            $comment['commentLikesCount']  =   $this->getCommentsLikeCountByCommentId($commentList['commentId']);
+            $comment['commentId']      =       $commentList['commentId'];
+            $comment['commentComment']    =       $commentList['feedComment'];
+            $comment['commentTimestamp']  =    $commentList['timestamp'];
+            array_push($commentsData, $comment);
+        }
+        return $commentsData;
+    }
+
+    function getCommentsLikeCountByCommentId($commentId)
+    {
+        $query = "SELECT commentLikeId FROM commentLikes WHERE commentLikeId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("s",$commentId);
+        $stmt->execute();
+        $stmt->store_result();
+        return $stmt->num_rows;
+    }
+
     function getFeeds()
     {
         $feeds = array();
@@ -194,6 +244,7 @@ class DbHandler
         {   
             $feed = array();
             $users = array();
+            $userId = $this->getUserId();
             $id = $feedList['feedUserId'];
             $users = $this->getUserById($id);
             $feed['userId']         =    $users['id'];
@@ -201,7 +252,7 @@ class DbHandler
             $feed['userUsername']   =    $users['username'];
             $feed['userImage']      =    $users['image'];
             $feed['feedId']         =    $feedList['feedId'];
-            $feed['liked']          =    $this->checkLike($userId,$feedList['feedId']);
+            $feed['liked']          =    $this->checkFeedLike($userId,$feedList['feedId']);
             $feed['feedLikes']      =    $this->getLikesCountByFeedId($feedList['feedId']);
             $feed['feedComments']   =    $this->getCommentsCountByFeedId($feedList['feedId']);
             $feed['feedImage']      =    $feedList['feedImage'];
@@ -212,11 +263,28 @@ class DbHandler
         return $feedsData;
     }
 
-    function checkLike($userId,$feedId)
+    function checkFeedLike($userId,$feedId)
     {
         $query = "SELECT likeId FROM likes WHERE userId=? AND feedId=?";
         $stmt = $this->con->prepare($query);
         $stmt->bind_param("ss",$userId,$feedId);
+        $stmt->execute();
+        $stmt->store_result();
+        if ($stmt->num_rows()>0) 
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    function checkCommentLike($userId,$commentId)
+    {
+        $query = "SELECT commentLikeId FROM commentLikes WHERE userId=? AND commentId=?";
+        $stmt = $this->con->prepare($query);
+        $stmt->bind_param("ss",$userId,$commentId);
         $stmt->execute();
         $stmt->store_result();
         if ($stmt->num_rows()>0) 
@@ -389,7 +457,7 @@ class DbHandler
             $feed['userUsername']   =    $users['username'];
             $feed['userImage']      =    $users['image'];
             $feed['feedId']         =    $feedList['feedId'];
-            $feed['liked']          =    $this->checkLike($userId,$feedList['feedId']);
+            $feed['liked']          =    $this->checkFeedLike($userId,$feedList['feedId']);
             $feed['feedLikes']      =    $this->getLikesCountByFeedId($feedList['feedId']);
             $feed['feedComments']   =    $this->getCommentsCountByFeedId($feedList['feedId']);
             $feed['feedImage']      =    $feedList['feedImage'];
@@ -441,6 +509,8 @@ class DbHandler
         $stmt->store_result();
         return $stmt->num_rows;
     }
+
+
 
     function getFeedsCountById($userId)
     {

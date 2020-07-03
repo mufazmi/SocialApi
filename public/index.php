@@ -219,6 +219,45 @@ $app->post('/login', function(Request $request, Response $response)
     }
 });
 
+$app->get('/feed/{feedId}/comments', function (Request $request, Response $response, array $args)
+{
+    $db = new DbHandler;
+    if (validateToken($db,$request,$response)) 
+    {
+        if (!empty($args['feedId'])) 
+        {
+            $userId = $db->getUserId();
+            $feedId = $args['feedId'];
+            if ($db->isFeedExist($feedId)) 
+            {
+                $comments = $db->getCommentsByFeedId($feedId);
+                if (!empty($comments)) 
+                {
+                    $responseCommentDetails = array();
+                    $responseCommentDetails['error'] = false;
+                    $responseCommentDetails['message'] = "Comments Found";
+                    $responseCommentDetails['comments'] = $comments;
+                    $response->write(json_encode($responseCommentDetails));
+                    return $response->withHeader('Content-type','application/json')
+                                    ->withStatus(200);
+                }
+                else
+                {
+                    returnException(true,"No Comment Found",$response);
+                }
+            }
+            else
+            {
+                returnException(true,"Feed Not Found",$response);
+            }
+        }
+        else
+        {
+            returnException(true,"Invalid Request...! Feed Id must not be empty",$response);
+        }
+    }
+});
+
 $app->get('/user/{username}', function(Request $request, Response $response, array $args)
 {
     $db = new DbHandler;
@@ -554,7 +593,7 @@ $app->get('/feed/{feedId}', function(Request $request, Response $response,array 
             $feed['userId']         =    $users['id'];
             $feed['userName']       =    $users['name'];
             $feed['userImage']      =    $users['image'];
-            $feed['liked']          =    $db->checkLike($feed['userId'],$feed['feedId']);
+            $feed['liked']          =    $db->checkFeedLike($feed['userId'],$feed['feedId']);
             $feed['feedLikes']      =    $db->getLikesCountByFeedId($feed['feedId']);
             $feed['feedComments']   =    $db->getCommentsCountByFeedId($feed['feedId']);
             $responseFeedDetails = array();
