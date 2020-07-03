@@ -586,25 +586,35 @@ $app->get('/feed/{feedId}', function(Request $request, Response $response,array 
     if (validateToken($db,$request,$response)) 
     {
         $feedId = $args['feedId'];
-        $feed = $db->getFeedById($feedId);
-        if (!empty($feed)) 
+        if ($db->isFeedExist($feedId)) 
         {
-            $users = $db->getUserById($feed['userId']);
-            $feed['userId']         =    $users['id'];
-            $feed['userName']       =    $users['name'];
-            $feed['userImage']      =    $users['image'];
-            $feed['liked']          =    $db->checkFeedLike($feed['userId'],$feed['feedId']);
-            $feed['feedLikes']      =    $db->getLikesCountByFeedId($feed['feedId']);
-            $feed['feedComments']   =    $db->getCommentsCountByFeedId($feed['feedId']);
-            $responseFeedDetails = array();
-            $responseFeedDetails['error'] = false;
-            $responseFeedDetails['message'] = "Feed List Found";
-            $responseFeedDetails['feed'] = $feed;
-            $response->write(json_encode($responseFeedDetails));
-            return $response->withHeader('Content-Type','application/json')
-                            ->withStatus(200);
+            $feed = $db->getFeedById($feedId);
+            if (!empty($feed)) 
+            {
+                $users = $db->getUserById($feed['userId']);
+                $feed['userId']         =    $users['id'];
+                $feed['userName']       =    $users['name'];
+                $feed['userImage']      =    $users['image'];
+                $feed['liked']          =    $db->checkFeedLike($feed['userId'],$feed['feedId']);
+                $feed['feedLikes']      =    $db->getLikesCountByFeedId($feed['feedId']);
+                $feed['feedComments']   =    $db->getCommentsCountByFeedId($feed['feedId']);
+                $responseFeedDetails = array();
+                $responseFeedDetails['error'] = false;
+                $responseFeedDetails['message'] = "Feed List Found";
+                $responseFeedDetails['feed'] = $feed;
+                $response->write(json_encode($responseFeedDetails));
+                return $response->withHeader('Content-Type','application/json')
+                                ->withStatus(200);
+            }
+            else
+            {
+                returnException(true,"Feed Not Found",$response);
+            }
         }
-        returnException(true,"No Feed Found",$response);
+        else
+        {
+            returnException(true,"Feed Not Found",$response);
+        }
     }
 });
 
